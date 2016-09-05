@@ -2,14 +2,15 @@
 % Please edit documentation in R/graphFunctions.R
 \name{getScriptGraph}
 \alias{getScriptGraph}
-\title{Title}
+\title{Retrieve derivation graph for export / vizalization}
 \usage{
 getScriptGraph(g = algebr$scriptGraph)
 }
 \arguments{
-\item{g}{}
+\item{g}{Derivation graph in internal data.frame format as created by algebr$newDerivationGraph}
 }
 \description{
-Title
+Returns derivation graph of the script in Ragraph format (Rgraphviz)
+can also convert other graphs created by algebr$newDerivationGraph to the Ragraph format (g-parameter)
 }
 

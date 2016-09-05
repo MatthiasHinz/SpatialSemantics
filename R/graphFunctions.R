@@ -207,7 +207,7 @@ disableProvenance <-function(){
 #' @examples
 reset_provenance <-function(){
   if(isTRUE(algebr$isEnabled)){
-    algebr$disableProvenance()
+    disableProvenance()
   }
   algebr$rec_num = 1
   algebr$version_history = list()
@@ -1651,4 +1651,14 @@ algebr$findAttr = function(exp){
     return(attrN)
   }
  return(NA)
+}
+
+
+
+#' Retrieves packages internals
+#'
+#' @return An environment in which all internal variables and functions of the SpatialSemantics-package are saved
+#' @export
+spsem_internals <- function(){
+  return(algebr)
 }
