@@ -1,11 +1,9 @@
-library(stringr)
-library("Rgraphviz")
-library(CodeDepends)
-library(codetools)
-
+#require(stringr)
+#require("Rgraphviz")
+#require(CodeDepends)
+#require(codetools)
 
 algebr = new.env()
-
 
 
 ####
@@ -15,7 +13,7 @@ algebr = new.env()
 #
 # Initiates a new derivation graph object for provenance recording
 #
-# @return derivation graph object in internal data.fram format
+# @return derivation graph object in internal data.frame format
 #
 algebr$newDerivationGraph <-function(){
   g = list(V = c(), E = list(), eAttrs=list(), nAttrs=list(), attrs=list(), fCalls=list(), exps=list())
@@ -27,23 +25,29 @@ algebr$newDerivationGraph <-function(){
 #
 #' Retrieve derivation graph for export / vizalization
 #'
-#' Returns derivation graph of the script in Ragraph format (Rgraphviz)
-#' can also convert other graphs created by algebr$newDerivationGraph to the Ragraph format (g-parameter)
+#' This function returns a derivation graph from the previously recorded provenance, if any
 #'
-#' @param g Derivation graph in internal data.frame format as created by algebr$newDerivationGraph
+#' @param g Derivation graph in internal data.frame format as created by the internal function 'algebr$newDerivationGraph'
 #'
-#' @return
+#' @return Returns derivation graph of the script in Ragraph format (Rgraphviz) or NULL, if there is no provanance available
+#'
+#' @seealso \code{\link{enableProvenance}}, \code{\link{disableProvenance}\code, {\link{reset_Provenance}}
 #' @export
 #'
 #' @examples
 getScriptGraph <- function(g=algebr$scriptGraph){
-  gR <- graphNEL(nodes = g$V,
+  if(is.null(g$V) || length(g$V) == 0){
+    warning("There is no derivation graph available because no provenance was recorded. Returning NULL")
+    return(NULL)
+  }
+
+  gR <- graph::graphNEL(nodes = g$V,
                  edgeL = g$E,
                  edgemode = "directed")
-  graph.par(list(fontsize=11))
-  gR <- layoutGraph(gR) #graphNEL format (graph package, just edges and nodes)
+  graph::graph.par(list(fontsize=11))
+  gR <- Rgraphviz::layoutGraph(gR) #graphNEL format (graph package, just edges and nodes)
   #Ragraph format (GraphViz package, includes layout information)
-  gRlayout <- agopen(gR, name="f", attrs=g$attrs, nodeAttrs=g$nAttrs, edgeAttrs=g$eAttrs)
+  gRlayout <- Rgraphviz::agopen(gR, name="f", attrs=g$attrs, nodeAttrs=g$nAttrs, edgeAttrs=g$eAttrs)
 }
 
 algebr$provenanceCallback <- function(algebr_env = algebr) {
@@ -71,7 +75,7 @@ algebr$provenanceCallback <- function(algebr_env = algebr) {
    #
    #  ls(envir = globalenv())[ls() %in% algebr$ls_last]
    #
-   #  info = scriptInfo(readScript(txt=as.character(as.expression(expr))))
+   #  info = CodeDepends::scriptInfo(CodeDepends::readScript(txt=as.character(as.expression(expr))))
    #  side_effects = new_vars[!new_vars %in% info[[1]]@outputs]
 
     ##save last captured call sementics to temporary call stack
@@ -81,7 +85,7 @@ algebr$provenanceCallback <- function(algebr_env = algebr) {
       algebr$tempCallStack <- subset(algebr$callStack, rec_num == algebr$rec_num) ##TODO: Review counting re_num (as mentioned above)
      }
 
-    info = scriptInfo(readScript(txt=as.character(as.expression(expr))))
+    info = CodeDepends::scriptInfo(CodeDepends::readScript(txt=as.character(as.expression(expr))))
     side_effects = c()
     lapply(algebr$new_ls, function(var){
       vare = algebr$enquote(var)
@@ -146,6 +150,7 @@ algebr$provenanceCallback <- function(algebr_env = algebr) {
 #' @return
 #' @export
 #'
+#' @seealso \code{\link{disableProvenance}\code, {\link{reset_Provenance}}
 #' @examples
 enableProvenance <- function(){
   if(is.null(algebr$rec_num))
@@ -186,6 +191,7 @@ enableProvenance <- function(){
 #' @return
 #' @export
 #'
+#' @seealso \code{\link{enableProvenance}}, {\link{reset_Provenance}}
 #' @examples
 disableProvenance <-function(){
 
@@ -204,6 +210,7 @@ disableProvenance <-function(){
 #' @return
 #' @export
 #'
+#' @seealso \code{\link{enableProvenance}}, \code{\link{disableProvenance}\code
 #' @examples
 reset_provenance <-function(){
   if(isTRUE(algebr$isEnabled)){
@@ -267,14 +274,14 @@ algebr$instance <- function(var, pos=0, forInput=FALSE){
     var=as.character(substitute(var))
 
   if(forInput){
-    versions = algebr$versions(var)
+    versions = getVersions(var)
     inst=versions[(dim(versions))[1]+pos,]
     if(algebr$rec_num==inst$rec_num && dim(versions)[1]>1)
       return(versions[(dim(versions))[1]+pos-1,])
     else
       return(inst)
   }
-   versions = algebr$versions(var)
+   versions = getVersions(var)
    return(versions[(dim(versions)[1]+pos),])
 }
 
@@ -307,19 +314,31 @@ algebr$addNewVersionRecord <- function(var){
   }
 
   var0=var
-  if(str_detect(var,pattern = "<-")){
+  if(stringr::str_detect(var,pattern = "<-")){
     var0=paste0("`",var,"`")
   }
   command = paste(deparse(provenance_history()[[algebr$rec_num]]), collapse = "\n")
-  instance=data.frame(rec_num = algebr$rec_num, IID=IID, class=class(eval(parse(text=var0),envir = globalenv())), semantics = estimateSemantics(var0), command = command, timestamp=timestamp(quiet = TRUE),stringsAsFactors = FALSE)
- # instance=data.frame(rec_num = algebr$rec_num, IID=IID, class=class(eval(parse(text=paste0("`",var,"`")),envir = globalenv())), semantics = estimateSemantics(var), timestamp=timestamp(quiet = TRUE),stringsAsFactors = FALSE)
+  instance=data.frame(rec_num = algebr$rec_num, IID=IID, class=class(eval(parse(text=var0),envir = globalenv())), semantics = getObjectSemantics(var0), command = command, timestamp=timestamp(quiet = TRUE),stringsAsFactors = FALSE)
+ # instance=data.frame(rec_num = algebr$rec_num, IID=IID, class=class(eval(parse(text=paste0("`",var,"`")),envir = globalenv())), semantics = getObjectSemantics(var), timestamp=timestamp(quiet = TRUE),stringsAsFactors = FALSE)
   algebr$version_history[[var]]=rbind(algebr$version_history[[var]], instance)
 }
 
-algebr$versions <- function(var){
+
+#' Version history of variable bindings
+#'
+#' This function returns a versioning history showing all modifications (initialization, updates and replacements) of a particular variable in the global environment
+#' The version based on recording provenance, i.e. it only captures modifcations that where don after calling enableProvenance() and before calling disableProvenance()
+#'
+#' @param var name of the variable, either string or object
+#'
+#' @return
+#' @export
+#'
+#' @examples
+getVersions <- function(var){
   if(!is.character(var))
     var=as.character(substitute(var))
-  #if(str_detect(var,pattern = "<-")){
+  #if(stringr::str_detect(var,pattern = "<-")){
   #  var=paste0("`",var,"`")
   #}
   #print(var)
@@ -353,17 +372,17 @@ algebr$addNodeObject <- function(var, g, isInput=FALSE, isOutput=FALSE, isSubset
     if(!var %in% algebr$last_ls && !isSubset && !exists(var, envir = parent.env(globalenv()))){
         return(algebr$addNodeLiteral(label = var, g))
     }
-    ver_num = dim(subset(algebr$versions(var), rec_num<algebr$rec_num))[1]
+    ver_num = dim(subset(getVersions(var), rec_num<algebr$rec_num))[1]
     #versioning support of variables
    # print(paste(ver_num, "version_num1",var, algebr$rec_num))
     if(ver_num>1){
       node_name = paste0(var,"~",ver_num)
       label=node_name
     }
-    class=algebr$versions(var)[ver_num, "semantics"]
+    class=getVersions(var)[ver_num, "semantics"]
     #print(paste("CLASS,",class))
     if(length(class)==0)
-      class=algebr$versions(var)[ver_num+1, "semantics"]
+      class=getVersions(var)[ver_num+1, "semantics"]
     label=paste0(label, " \\n[",class,"]")
   }else if(isOutput){
     #for outputs, its sufficient to check if objects exists in current workspace
@@ -377,13 +396,13 @@ algebr$addNodeObject <- function(var, g, isInput=FALSE, isOutput=FALSE, isSubset
 
     #versioning support of variables
 
-    ver_num = dim(algebr$versions(var))[1]
+    ver_num = dim(getVersions(var))[1]
     #print(paste(ver_num, "version_num2",var, algebr$rec_num))
     if(ver_num>1){
       node_name = paste0(var,"~",ver_num)
       label=node_name
     }
-    label=paste0(label, " \\n[",algebr$versions(var)[ver_num, "semantics"],"]")
+    label=paste0(label, " \\n[",getVersions(var)[ver_num, "semantics"],"]")
   }
 
   g=algebr$addNode(node_name,g, label = label)
@@ -519,7 +538,7 @@ algebr$parseCommand = function(cmd, g=list(V = c(), E = list(), attrs=list(), eA
   #print(paste(as.character(as.expression(cmd)), class(cmd)))
   cmd_id = NULL
   #CASE 1: cmd is some kind of variable
-  cmdInfo = getInputs(algebr$removeTheAt(cmd))
+  cmdInfo = CodeDepends::getInputs(algebr$removeTheAt(cmd))
   if(is.name(cmd)){
     g=algebr$addNodeObject(cmd, g, isInput= isInput, isOutput=isOutput)
     cmd_id=g$last_vt
@@ -674,7 +693,7 @@ algebr$parseCommand = function(cmd, g=list(V = c(), E = list(), attrs=list(), eA
         ##TODO:review this; HEURISTIC: for graphics function create dependency on previously called plot-funcion
         if(call_function %in% c("text", "points", "lines", "title", "par", "abline","arrow","axis","Axis","box", "grid","legend","lines", "pch","rug")){
           for(i in ((length(g$fCalls)-1):1)){
-              if(str_detect(g$fCalls[[i]]$fname, "plot")){
+              if(stringr::str_detect(g$fCalls[[i]]$fname, "plot")){
                 cmd_id_plot = names(g$fCalls[i])
                 g=algebr$addEdgeInput(input = cmd_id_plot, cmd = cmd_id, g=g,hidden = TRUE,label = "[heuristic]")
               }
@@ -717,7 +736,8 @@ algebr$parseCommand = function(cmd, g=list(V = c(), E = list(), attrs=list(), eA
             function_obj = attr(function_obj,"wFun")
           }
 
-          globals = eval(call("findGlobals", function_obj, merge=FALSE))
+        #  globals = eval(call("findGlobals", function_obj, merge=FALSE))
+          globals = codetools::findGlobals(fun = function_obj,merge = FALSE)
           ##TODO: expore function references to other packages
           ls_func = globals$functions[globals$functions %in% ls(envir = globalenv())]
 
@@ -767,7 +787,7 @@ algebr$containsOnlyPrimitives = function(cmd){
   if(class(cmd)== "ScriptNodeInfo")
     cmdInfo=cmd
   else
-    cmdInfo = getInputs(algebr$removeTheAt(cmd))
+    cmdInfo = CodeDepends::getInputs(algebr$removeTheAt(cmd))
 
   funs=names(cmdInfo@functions)
   sel = funs %in% c("[","[[","$","@") #exclude expressions that only contain subset-operators
@@ -833,15 +853,17 @@ rewriteReplacementFunction = function(expr){
 
 #' Estimate semantics of a given object
 #'
-#' @param var
-#' @param env
-#' @param isLiteral
+#' @param var object or name of the object
+#' @param env The environment in which the object shall be evaluated
+#' @param isLiteral TRUE/FALSE allowed. Force var to be interpreted as a literal, even if it is for instance a name of an object in the workspace.
 #'
-#' @return
+#' @return Returns the semantic reference type of the object.
+#'  If the reference type is uncertain because a required annotation is missing, a reference type is assumed and prefixed with a questionmark (?), also a warning is given out.
+#'  For objects, where no semantic mapping is defined, simply the class will be returned
 #' @export
 #'
 #' @examples
-estimateSemantics <- function(var, env=globalenv(), isLiteral=FALSE){
+getObjectSemantics <- function(var, env=globalenv(), isLiteral=FALSE){
 
   if((!is.character(var) && !is.symbol(var) && !is.name(var)) || isLiteral) {
     obj=var
@@ -886,8 +908,8 @@ estimateSemantics <- function(var, env=globalenv(), isLiteral=FALSE){
 
   if (is(obj, "SField")) { ## for the actual mss package
     SFieldData_observations = slot(obj, "observations")
-    sObs = estimateSemantics(SFieldData_observations, env = environment())
-    sObs = str_replace(sObs, " set","")
+    sObs = getObjectSemantics(SFieldData_observations, env = environment())
+    sObs = stringr::str_replace(sObs, " set","")
     return(paste(sObs, "x SExtend set"))
   }
 
@@ -971,7 +993,21 @@ estimateSemantics <- function(var, env=globalenv(), isLiteral=FALSE){
 }
 
 
-algebr$callSemantics = function(x){
+#' Pre-defined semantics of a function call
+#'
+#' @param x An object of type function
+#'
+#' @return
+#' - returns a list of pre-defined semantics which are alowed for this function
+#' - returns "dynamic" if the function is semantics-enabled but does not have pre-defined semantics
+#' - returns NULL if the function is not semantics-enabled and does not implement pre-defined semantics
+#' @export
+#' @seealso \code{\link{getObjectSemantics}}, \code{\link{captureSemantics}}
+#'
+#' @examples
+getCallSemantics = function(x){
+  if(!is.function(x)){stop("The given object x is not a function. Call semantics are an attribute only for semantics-enabled funtions.")}
+
   if(!captureSemantics(x)){
     warning("This function is not semantics-enabled. Please use 'captureSemantics' in order to create a semantic wrapper.")
     return(NULL)
@@ -981,8 +1017,8 @@ algebr$callSemantics = function(x){
 
 
 algebr$estimateCallSemantics <- function(args, output) {
-  s_output = estimateSemantics(output)
-  s_inputs = sapply(args, function(arg){estimateSemantics(arg, env = environment())})
+  s_output = getObjectSemantics(output)
+  s_inputs = sapply(args, function(arg){getObjectSemantics(arg, env = environment())})
   call_semantics = paste(paste(s_inputs, collapse = " -> "), s_output, sep=" -> ")
   return(call_semantics)
 }
@@ -1097,8 +1133,8 @@ captureSemantics <- function(fun){
     if(length(semantics==1) && is.na(semantics)){ ## estimate semantics from in/output
       semantics = call_semantics
     }else{
-      s=str_to_upper(str_trim(semantics))
-      sc=str_to_upper(str_trim(call_semantics))
+      s=stringr::str_to_upper(stringr::str_trim(semantics))
+      sc=stringr::str_to_upper(stringr::str_trim(call_semantics))
       if(!sc %in% s){
         warning(paste("Inconsistent function semantics, given is ",call_semantics,"but expected was one of the following: ",paste(semantics,collapse=", ")))
         isConsistent = FALSE
@@ -1185,14 +1221,14 @@ addSemanticPedigree <- function(obj, attr="ALL", name = NA, procedure, result_se
   }
 
   if(attr=="ALL" && is.null(parent_semantics)){
-    result_semantics = estimateSemantics(obj)
+    result_semantics = getObjectSemantics(obj)
     parent_semantics = NA
   }else if(attr=="ALL" && !is.null(result_semantics)){
-    parent_semantics =  estimateSemantics(obj)
+    parent_semantics =  getObjectSemantics(obj)
   }else{
     #print(paste("estimating semantics of ---",varname, attr))
-    result_semantics = estimateSemantics(obj[[attr]])
-    parent_semantics =  estimateSemantics(obj)
+    result_semantics = getObjectSemantics(obj[[attr]])
+    parent_semantics =  getObjectSemantics(obj)
   }
 
   command=NA
@@ -1294,15 +1330,15 @@ getSemanticPedigree <- function(obj, attr="ALL"){
 ####
 
 algebr$unquote = function(str){
-  if(str_detect(str,"^`.*`$"))
-     return(str_sub(str, 2,-2))
+  if(stringr::str_detect(str,"^`.*`$"))
+     return(stringr::str_sub(str, 2,-2))
   else
     return(str)
 }
 
 
 algebr$enquote = function(str){
-  if(!str_detect(str,"^`.*`$") && str_detect(str,".*<-")){
+  if(!stringr::str_detect(str,"^`.*`$") && stringr::str_detect(str,".*<-")){
     str=paste0("`",str,"`")
     return(str)
   }else{
@@ -1354,7 +1390,7 @@ algebr$funFromString = function(string_var, env = globalenv()){
   if(is.function(fun_obj))
     return(fun_obj)
   #in some cases, the following method works better when the other fails (for instance, when the function contained in a subset, i.e. parent$function())
-  if(str_detect(string_var,pattern = "<-")){
+  if(stringr::str_detect(string_var,pattern = "<-")){
     string_var=paste0("`",string_var,"`")
   }
   fun_obj=eval(parse(text=as.character(as.expression(string_var))), envir = env)
@@ -1427,10 +1463,10 @@ algebr$findExpressionSemantics = function(exp, exp_id, cmd, g){
     g$nAttrs$label[[exp_id]] <- label
 
    out_iids = NULL
-  if(str_detect(exp_id,"^expr_")){
+  if(stringr::str_detect(exp_id,"^expr_")){
     g$exps[[exp_id]] <- exp
     out_iids = unlist(g$exps[[exp_id]]$outputs)
-  }else if(str_detect(exp_id,"^fcall_")){
+  }else if(stringr::str_detect(exp_id,"^fcall_")){
     g$fCalls[[exp_id]] <- exp
     out_iids = unlist(g$fCalls[[exp_id]]$outputs)
   }else{
@@ -1493,9 +1529,9 @@ algebr$findDependencySemantics <- function(exp, dep_nodes, cmd, g) {
         return(record$semantics) #should always return a value normally
       } else if(dep_id %in% names(g$fCalls)){
         return("?")
-      }else if(str_detect(dep_id,"^lt_")){
+      }else if(stringr::str_detect(dep_id,"^lt_")){
         value=g$nAttrs$label[[dep_id]] ##may not be the most stable solution... TODO: save literal values somewhere else
-        return(estimateSemantics(value,isLiteral = TRUE))
+        return(getObjectSemantics(value,isLiteral = TRUE))
       }else{
         return("?")
       }
@@ -1503,8 +1539,9 @@ algebr$findDependencySemantics <- function(exp, dep_nodes, cmd, g) {
     return(sem_vec)
   }else{
     #print(paste("No dep nodes for ", as.character(as.expression(substitute(dep_nodes)))))
+    in_sem="?"
     tryCatch({value_xyz = eval(cmd)
-    in_sem=estimateSemantics(value_xyz)},
+    in_sem=getObjectSemantics(value_xyz)},
     error= function(e){
       warning(paste("semantics of expression ", exp, "could not be evaluated"))
       in_sem="?"})
@@ -1532,7 +1569,7 @@ mapply(function(fCall, call_id){
     if(is.na(fCall$semantics)){
 
       g <<- algebr$findExpressionSemantics(fCall, call_id, fCall$command,g= g)
-      #if(str_detect(node_id, "^lt_")){
+      #if(stringr::str_detect(node_id, "^lt_")){
         # assume it is a literal, try to parse label to value #TODO make this more "formal"
       return()
     }
@@ -1548,8 +1585,8 @@ mapply(function(fCall, call_id){
 #test$exps$expr_lkjnmQ
 #test$fCalls$fcall_crrNKR
 algebr$varFromIID <-function(iid){
-  var=str_replace(iid, "~\\d*$","")
-  if(!is.null(algebr$versions(var)))
+  var=stringr::str_replace(iid, "~\\d*$","")
+  if(!is.null(getVersions(var)))
     return(var)
   else
     return(NULL)
@@ -1559,7 +1596,7 @@ algebr$findInstanceRecord = function(node_id){
    var=algebr$varFromIID(node_id)
    if(is.null(var))
      return(NULL)
-   hist = algebr$versions(var)
+   hist = getVersions(var)
    if(!is.null(hist)){
      sel=which(hist$IID == node_id)
 

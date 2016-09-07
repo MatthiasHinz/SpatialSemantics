@@ -7,10 +7,12 @@
 getScriptGraph(g = algebr$scriptGraph)
 }
 \arguments{
-\item{g}{Derivation graph in internal data.frame format as created by algebr$newDerivationGraph}
+\item{g}{Derivation graph in internal data.frame format as created by the internal function 'algebr$newDerivationGraph'}
+}
+\value{
+Returns derivation graph of the script in Ragraph format (Rgraphviz) or NULL, if there is no provanance available
 }
 \description{
-Returns derivation graph of the script in Ragraph format (Rgraphviz)
-can also convert other graphs created by algebr$newDerivationGraph to the Ragraph format (g-parameter)
+This function returns a derivation graph from the previously recorded provenance, if any
 }
 

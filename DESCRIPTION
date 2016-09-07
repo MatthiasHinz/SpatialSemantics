@@ -28,6 +28,7 @@ Imports:
     codetools,
     Rgraphviz,
     stringr,
+    graph
 Suggests:
     sp,
     mss

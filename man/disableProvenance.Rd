@@ -9,4 +9,7 @@ disableProvenance()
 \description{
 Enable / disable provenance tracking
 }
+\seealso{
+\code{\link{enableProvenance}}, {\link{reset_Provenance}}
+}
 
