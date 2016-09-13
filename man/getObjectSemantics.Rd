@@ -15,7 +15,8 @@ getObjectSemantics(var, env = globalenv(), isLiteral = FALSE)
 }
 \value{
 Returns the semantic reference type of the object.
- If the reference type is uncertain because a required annotation is missing, a reference type is assumed and prefixed with a questionmark (?), also a warning is given out.
+ If the reference type is unknown because there is no annotation is available, a reference type is estimated based on a heuristic mapping.
+ If the mapping is 'unsave', the type will be prefixed with a questionmark '(?)' and a warning is given out.
  For objects, where no semantic mapping is defined, simply the class will be returned
 }
 \description{

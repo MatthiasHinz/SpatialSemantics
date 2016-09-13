@@ -858,7 +858,8 @@ rewriteReplacementFunction = function(expr){
 #' @param isLiteral TRUE/FALSE allowed. Force var to be interpreted as a literal, even if it is for instance a name of an object in the workspace.
 #'
 #' @return Returns the semantic reference type of the object.
-#'  If the reference type is uncertain because a required annotation is missing, a reference type is assumed and prefixed with a questionmark (?), also a warning is given out.
+#'  If the reference type is unknown because there is no annotation is available, a reference type is estimated based on a heuristic mapping.
+#'  If the mapping is 'unsave', the type will be prefixed with a questionmark '(?)' and a warning is given out.
 #'  For objects, where no semantic mapping is defined, simply the class will be returned
 #' @export
 #'
@@ -902,15 +903,11 @@ getObjectSemantics <- function(var, env=globalenv(), isLiteral=FALSE){
     else return("bool set")
   }
 
-  if (is(obj, "CRS")) { ## for the actual mss package
-    return("'a")
-  }
-
   if (is(obj, "SField")) { ## for the actual mss package
     SFieldData_observations = slot(obj, "observations")
     sObs = getObjectSemantics(SFieldData_observations, env = environment())
-    sObs = stringr::str_replace(sObs, " set","")
-    return(paste(sObs, "x SExtend set"))
+    sObs = paste0("(",sObs,")")
+    return(paste(sObs, "x SExtend"))
   }
 
   if (is(obj, "SpatialLinesDataFrame")) {
@@ -980,7 +977,8 @@ getObjectSemantics <- function(var, env=globalenv(), isLiteral=FALSE){
   }
 
   if (is(obj, "Spatial")) {
-    return("S set")
+    warning(paste("No semantic annotation available for object",var,". Assumend semantics will be",semantics))
+    return("(?) S set")
   }
 
  if(any(sapply(list(is.data.frame, is.list, is.array, is.matrix), function(fun) {
@@ -989,7 +987,7 @@ getObjectSemantics <- function(var, env=globalenv(), isLiteral=FALSE){
       return("Q set")
   }
 
-  return(class(obj))
+  return(paste0("(?)Class:",class(obj)))
 }
 
 
@@ -1005,7 +1003,7 @@ getObjectSemantics <- function(var, env=globalenv(), isLiteral=FALSE){
 #' @seealso \code{\link{getObjectSemantics}}, \code{\link{captureSemantics}}
 #'
 #' @examples
-getCallSemantics = function(x){
+getDefaultCallSemantics = function(x){
   if(!is.function(x)){stop("The given object x is not a function. Call semantics are an attribute only for semantics-enabled funtions.")}
 
   if(!captureSemantics(x)){
