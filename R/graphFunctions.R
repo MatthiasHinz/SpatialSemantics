@@ -84,7 +84,7 @@ algebr$provenanceCallback <- function(algebr_env = algebr) {
     if(dim(algebr$callStack)[1]>0){
       algebr$tempCallStack <- subset(algebr$callStack, rec_num == algebr$rec_num) ##TODO: Review counting re_num (as mentioned above)
      }
-
+    expr=rewriteReplacementFunction(expr) #brings commands thast use replacement functions into a parser-friendly form
     info = CodeDepends::scriptInfo(CodeDepends::readScript(txt=as.character(as.expression(expr))))
     side_effects = c()
     lapply(algebr$new_ls, function(var){
@@ -383,7 +383,8 @@ algebr$addNodeObject <- function(var, g, isInput=FALSE, isOutput=FALSE, isSubset
     #print(paste("CLASS,",class))
     if(length(class)==0)
       class=getVersions(var)[ver_num+1, "semantics"]
-    label=paste0(label, " \\n[",class,"]")
+    class = algebr$toSemanticLabel(class)
+    label=paste0(label, " \\n[",algebr$toSemanticLabel(class),"]")
   }else if(isOutput){
     #for outputs, its sufficient to check if objects exists in current workspace
     if(!var %in% algebr$new_ls && !isSubset && !exists(var, envir = parent.env(globalenv()))){
@@ -402,7 +403,9 @@ algebr$addNodeObject <- function(var, g, isInput=FALSE, isOutput=FALSE, isSubset
       node_name = paste0(var,"~",ver_num)
       label=node_name
     }
-    label=paste0(label, " \\n[",getVersions(var)[ver_num, "semantics"],"]")
+    semantics = getVersions(var)[ver_num, "semantics"]
+    semantics = algebr$toSemanticLabel(semantics)
+    label=paste0(label, " \\n[",semantics,"]")
   }
 
   g=algebr$addNode(node_name,g, label = label)
@@ -669,7 +672,7 @@ algebr$parseCommand = function(cmd, g=list(V = c(), E = list(), attrs=list(), eA
           if(length(sel)>0){
             sel=sel[1] #select first element
             semantics=algebr$tempCallStack[sel,]$semantics
-            label=paste0(label,"\\n[",semantics,"]")
+            label=paste0(label,"\\n[",algebr$toSemanticLabel(semantics),"]")
             sel=-1*sel
             algebr$tempCallStack = algebr$tempCallStack[sel,] #remove evaluated call
           }
@@ -1452,20 +1455,23 @@ algebr$findExpressionSemantics = function(exp, exp_id, cmd, g){
     in_vec = paste(in_vec, collapse = " -> ")
     out_sem = algebr$findDependencySemantics(exp, exp$outputs, cmd, g)
     out_sem_str = out_sem
-    if(length(out_sem>1)){
-      out_sem_str = paste("(",paste(out_sem, collapse = ", "),")")
+    if(length(out_sem)>1){
+      out_sem_str = paste(paste0("(",out_sem,")"), collapse = " x ")
     }
     exp$semantics=paste0(in_vec, " -> ", out_sem_str)
     label = g$nAttrs$label[[exp_id]]
-    label = paste0(label,"\n[",exp$semantics,"]")
+    label = paste0(label,"\\n[",algebr$toSemanticLabel(exp$semantics),"]")
     g$nAttrs$label[[exp_id]] <- label
 
    out_iids = NULL
   if(stringr::str_detect(exp_id,"^expr_")){
     g$exps[[exp_id]] <- exp
+    g$exps[[exp_id]]$out_sem = out_sem_str
     out_iids = unlist(g$exps[[exp_id]]$outputs)
+
   }else if(stringr::str_detect(exp_id,"^fcall_")){
     g$fCalls[[exp_id]] <- exp
+    g$fCalls[[exp_id]]$out_sem = out_sem_str
     out_iids = unlist(g$fCalls[[exp_id]]$outputs)
   }else{
     stop(paste0("Could not determine whether input is a simple expression or a function call: ", exp_id))
@@ -1526,7 +1532,17 @@ algebr$findDependencySemantics <- function(exp, dep_nodes, cmd, g) {
       if(!is.null(record)){
         return(record$semantics) #should always return a value normally
       } else if(dep_id %in% names(g$fCalls)){
-        return("?")
+        out_sem=g$fCalls[[dep_id]]$out_sem
+        if(!is.null(out_sem))
+          return(out_sem)
+        else
+          return("?")
+      }else if(dep_id %in% names(g$exps)){
+        out_sem=g$exps[[dep_id]]$out_sem
+        if(!is.null(out_sem))
+          return(out_sem)
+        else
+          return("?")
       }else if(stringr::str_detect(dep_id,"^lt_")){
         value=g$nAttrs$label[[dep_id]] ##may not be the most stable solution... TODO: save literal values somewhere else
         return(getObjectSemantics(value,isLiteral = TRUE))
@@ -1688,6 +1704,17 @@ algebr$findAttr = function(exp){
  return(NA)
 }
 
+algebr$toSemanticLabel = function(str_sem){
+  out = str_sem
+  if(stringr::str_detect(str_sem, " -> "))
+    out = stringr::str_replace_all(string = out, pattern = " -> ",replacement =  " ⇒ ")
+  if(stringr::str_detect(str_sem, " x "))
+    out = stringr::str_replace_all(string = out, pattern = " x ",replacement = " ⨉ ")
+  #print(out)
+  #out=paste0(out,"TEST")
+
+  return(out)
+}
 
 
 #' Retrieves packages internals
