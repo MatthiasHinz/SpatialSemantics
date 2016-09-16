@@ -32,6 +32,7 @@ coordinates(dataMALARIA) <- c("x", "y")
 proj4string(dataMALARIA) <- "+proj=longlat +datum=WGS84 +ellps=WGS84"
 dataMALARIA <- spTransform(dataMALARIA, CRS("+proj=merc +datum=WGS84 +ellps=WGS84"))
 
+
 ########################################################################################
 ### Spatial oblique decision tree: using SpODT algorithme for spatial classification ###
 

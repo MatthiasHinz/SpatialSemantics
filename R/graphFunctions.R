@@ -144,6 +144,10 @@ algebr$provenanceCallback <- function(algebr_env = algebr) {
   }
 }
 
+algebr$enabled = function(){
+  return(isTRUE(algebr$isEnabled))
+}
+
 
 #' Enable / disable provenance tracking
 #'
@@ -164,7 +168,7 @@ enableProvenance <- function(){
   if(is.null(algebr$callStack))
     algebr$callStack = data.frame()
 
-  if(!isTRUE(algebr$isEnabled)){
+  if(!algebr$enabled()){
     algebr$callback <- addTaskCallback(algebr$provenanceCallback())
     algebr$isEnabled = TRUE
   }else{
@@ -195,7 +199,7 @@ enableProvenance <- function(){
 #' @examples
 disableProvenance <-function(){
 
-  if(isTRUE(algebr$isEnabled)){
+  if(algebr$enabled()){
     algebr$isEnabled= FALSE
     removeTaskCallback(algebr$callback)
   }else{
@@ -213,7 +217,7 @@ disableProvenance <-function(){
 #' @seealso \code{\link{enableProvenance}}, \code{\link{disableProvenance}\code
 #' @examples
 reset_provenance <-function(){
-  if(isTRUE(algebr$isEnabled)){
+  if(algebr$enabled()){
     disableProvenance()
   }
   algebr$rec_num = 1
@@ -1123,11 +1127,11 @@ captureSemantics <- function(fun){
     if(!is.null(postprocessor)){
       output = postprocessor(args, output, call_semantics)
     }
+    isValid = TRUE
     if(!is.null(validator)){
       isValid = validator(args, output, semantics, call_semantics)
       if(!isValid){
-        warning("Semantic inconsistensy found during post-validation of a semanic wrapper!")
-        isConsistent=FALSE
+        warning("Post-validation of function call failed!")
       }
     }
 
@@ -1140,19 +1144,21 @@ captureSemantics <- function(fun){
         warning(paste("Inconsistent function semantics, given is ",call_semantics,"but expected was one of the following: ",paste(semantics,collapse=", ")))
         isConsistent = FALSE
       }
-      if(!isConsistent)
+      if(!isValid)
+        call_semantics = paste0(call_semantics, ": INVALID!")
+      else if(!isConsistent)
         call_semantics = paste0(call_semantics, ": INCONSISTENT!")
     }
 
     ## The call is only recordet if it occurs from the global environment (to avoid confusion if they are called internaly or recursively(?))
-    if(isTRUE(algebr$isEnabled) && identical(parent.frame(),globalenv())){
-      cat(paste0("Call: ",call_semantics,"\n"))
+    if(algebr$enabled() && identical(parent.frame(),globalenv())){
+      #cat(paste0("Call: ",call_semantics,"\n"))
       callSemantics=data.frame(rec_num=algebr$rec_num, semantics=call_semantics,fid=fid, time = timestamp(quiet = TRUE), stringsAsFactors = FALSE)
       algebr$callStack=rbind(algebr$callStack,callSemantics)
     }
-    ## check if output was annotated
+    ## check if output was annotated if not, apply generic annotator
     rec_nums = attr(output, "semanticPedigree")$rec_num
-    if(isTRUE(algebr$isEnabled) && (is.null(rec_nums) || !algebr$rec_num %in% rec_nums)){
+    if(algebr$enabled() && (is.null(rec_nums) || !algebr$rec_num %in% rec_nums)){
       genericProcessor = algebr$genericProcedureAnnotator(procedureName)
       output=genericProcessor(args, output, call_semantics)
       cat("Information: using 'genericProcedureAnnotator'-function to annotate output. Consider customizing the postprocessor-function in order to apply user-defined semantics.")
@@ -1235,7 +1241,7 @@ addSemanticPedigree <- function(obj, attr="ALL", name = NA, procedure, result_se
   command=NA
   rec_num=NA
 
-  if(algebr$isEnabled){
+  if(algebr$enabled()){
     rec_num=algebr$rec_num
     if(algebr$rec_num <= length(provenance_history()))
       command=paste(deparse(expr=provenance_history()[[algebr$rec_num]]),collapse="\n")
@@ -1445,7 +1451,7 @@ algebr$isAlreadyAnnotated = function(obj){
   #return(FALSE)
   #look if object is already annoted
   rec_nums = attr(obj, "semanticPedigree")$rec_num
-  isAnnotated= isTRUE(algebr$isEnabled) && !is.null(rec_nums) && algebr$rec_num %in% rec_nums
+  isAnnotated= algebr$enabled() && !is.null(rec_nums) && algebr$rec_num %in% rec_nums
  return(isAnnotated)
 }
 
@@ -1477,8 +1483,8 @@ algebr$findExpressionSemantics = function(exp, exp_id, cmd, g){
     stop(paste0("Could not determine whether input is a simple expression or a function call: ", exp_id))
   }
 
-  print(out_sem)
-  print(out_iids)
+ # print(out_sem)
+ # print(out_iids)
   if(is.null(out_iids))
     return(g)
   mapply(function(out_iid, out_sem){
