@@ -322,7 +322,12 @@ algebr$addNewVersionRecord <- function(var){
     var0=paste0("`",var,"`")
   }
   command = paste(deparse(provenance_history()[[algebr$rec_num]]), collapse = "\n")
-  instance=data.frame(rec_num = algebr$rec_num, IID=IID, class=class(eval(parse(text=var0),envir = globalenv())), semantics = getObjectSemantics(var0), command = command, timestamp=timestamp(quiet = TRUE),stringsAsFactors = FALSE)
+  obj=eval(parse(text=var0),envir = globalenv())
+  functionalType = functionalType(obj)
+  if(is.null(functionalType))
+    functionalType = NA
+  instance=data.frame(rec_num = algebr$rec_num, IID=IID, class=paste(class(obj), collapse = " "), semantics = getObjectSemantics(var0), functionalType = functionalType, command = command, timestamp=timestamp(quiet = TRUE),stringsAsFactors = FALSE)
+  #instance=data.frame(rec_num = algebr$rec_num, IID=IID, class=paste(class(eval(parse(text=var0),envir = globalenv())), collapse = " "), semantics = getObjectSemantics(var0), command = command, timestamp=timestamp(quiet = TRUE),stringsAsFactors = FALSE)
  # instance=data.frame(rec_num = algebr$rec_num, IID=IID, class=class(eval(parse(text=paste0("`",var,"`")),envir = globalenv())), semantics = getObjectSemantics(var), timestamp=timestamp(quiet = TRUE),stringsAsFactors = FALSE)
   algebr$version_history[[var]]=rbind(algebr$version_history[[var]], instance)
 }
@@ -384,11 +389,17 @@ algebr$addNodeObject <- function(var, g, isInput=FALSE, isOutput=FALSE, isSubset
       label=node_name
     }
     class=getVersions(var)[ver_num, "semantics"]
+    functionalType  = getVersions(var)[ver_num, "functionalType"]
     #print(paste("CLASS,",class))
-    if(length(class)==0)
+    if(length(class)==0){
       class=getVersions(var)[ver_num+1, "semantics"]
-    class = algebr$toSemanticLabel(class)
-    label=paste0(label, " \\n[",algebr$toSemanticLabel(class),"]")
+      functionalType  = getVersions(var)[ver_num+1, "functionalType"]
+    }
+    semantics = algebr$toSemanticLabel(class)
+    if(!is.na(functionalType)){
+      semantics = paste0(functionalType,"Data: ",semantics)
+    }
+    label=paste0(label, " \\n[",semantics,"]")
   }else if(isOutput){
     #for outputs, its sufficient to check if objects exists in current workspace
     if(!var %in% algebr$new_ls && !isSubset && !exists(var, envir = parent.env(globalenv()))){
@@ -407,8 +418,13 @@ algebr$addNodeObject <- function(var, g, isInput=FALSE, isOutput=FALSE, isSubset
       node_name = paste0(var,"~",ver_num)
       label=node_name
     }
+
     semantics = getVersions(var)[ver_num, "semantics"]
     semantics = algebr$toSemanticLabel(semantics)
+    functionalType  = getVersions(var)[ver_num, "functionalType"]
+    if(!is.na(functionalType)){
+      semantics = paste0(functionalType,"Data: ",semantics)
+    }
     label=paste0(label, " \\n[",semantics,"]")
   }
 
@@ -827,6 +843,9 @@ algebr$containsOnlyPrimitives = function(cmd){
 #'
 #'
 rewriteReplacementFunction = function(expr){
+  if(length(expr)<2)
+    return(expr)
+
   if(is.call(expr[[2]])){
     fname= expr[[2]][[1]]
 
@@ -883,13 +902,16 @@ getObjectSemantics <- function(var, env=globalenv(), isLiteral=FALSE){
 
   ##for expressions such as meuse[1] (subset), it will be -ASSUMED- that the semantics are the same as with paren data set. i.e. meuse
 # print(paste0("parse variable ", paste(var, collapse = ""), " of class ", class(var)))
- var_e = parse(text=algebr$enquote(var))
+  #print(paste("ljfoaf ", substitute(var, env = globalenv()), var,class(obj), isLiteral))
+ try({
+   var_e = parse(text=algebr$enquote(var))
   var_e = var_e[[1]]
   if(!is.symbol(var_e) && var_e[[1]]=="["){
     var_e=var_e[[2]]
     var=deparse(var_e)
     obj = tryCatch(eval(var_e,envir = env),error = function(e) var)
-  }
+  }},silent=TRUE
+ )
 
 
   if(!is.null(attr(obj, "semantics")))
@@ -919,7 +941,7 @@ getObjectSemantics <- function(var, env=globalenv(), isLiteral=FALSE){
 
   if (is(obj, "SpatialLinesDataFrame")) {
     semantics= "(?)S x Q set"
-    warning(paste("No semantic annotation available for object",var,". Assumend semantics will be",semantics))
+    warning(paste0("No semantic annotation available for object ",var,". Assumend semantics will be: ",semantics))
     return(semantics)
   }
 
@@ -930,40 +952,41 @@ getObjectSemantics <- function(var, env=globalenv(), isLiteral=FALSE){
 
   if (is(obj, "SpatialPixelsDataFrame")) {
     semantics= "(?)S x Q set"
-    warning(paste("No semantic annotation available for object",var,". Assumend semantics will be",semantics))
+    warning(paste0("No semantic annotation available for object ",var,". Assumend semantics will be: ",semantics))
     return(semantics)
   }
 
   if (is(obj, "SpatialPointsDataFrame")) {
     semantics= "(?)S x Q set"
-    warning(paste("No semantic annotation available for object",var,". Assumend semantics will be ",semantics))
+    warning(paste0("No semantic annotation available for object ",var,". Assumend semantics will be: ",semantics))
     return(semantics)
   }
 
-  if (is(obj, "SpatialPixels")) {
-    return("S set")
+  if (is(obj, "SpatialPixels") || is(obj, "SpatialPoints")) {
+    if(length(obj)==1)
+      return("S")
+    else
+      return("S set")
   }
 
-  if (is(obj, "SpatialPoints")) {
-    #how many points
-    return("S set")
-  }
 
   if (is(obj, "SpatialMultiPointsDataFrame")) {
     #how many points
     semantics= "(?)S x Q set"
-    warning(paste("No semantic annotation available for object",var,". Assumend semantics will be ",semantics))
+    warning(paste0("No semantic annotation available for object ",var,". Assumend semantics will be: ",semantics))
     return(semantics)
   }
 
   if (is(obj, "SpatialMultiPoints")) {
-    #how many points
-    return("S set")
+    if(length(obj)==1)
+      return("S")
+    else
+      return("S set")
   }
 
   if (is(obj, "SpatialGridDataFrame")) {
     semantics = "(?)S x Q set"
-    warning(paste("No semantic annotation available for object",var,". Assumend semantics will be ",semantics))
+    warning(paste0("No semantic annotation available for object ",var,". Assumend semantics will be: ",semantics))
     return(semantics)
   }
 
@@ -974,24 +997,87 @@ getObjectSemantics <- function(var, env=globalenv(), isLiteral=FALSE){
   if (is(obj, "SpatialPolygonsDataFrame")) {
     #TODO: how many Polygons?
     semantics= "(?)R x Q set"
-    warning(paste("No semantic annotation available for object",var,". Assumend semantics will be",semantics))
+    warning(paste0("No semantic annotation available for object ",var,". Assumend semantics will be: ",semantics))
     return(semantics)
   }
 
   if (is(obj, "SpatialPolygons")) {
-    #TODO: how many Polygons?
-    return("R set")
+    if(length(obj)==1)
+      return("R")
+    else
+      return("R set")
   }
 
   if (is(obj, "Spatial")) {
-    warning(paste("No semantic annotation available for object",var,". Assumend semantics will be",semantics))
-    return("(?) S set")
+    semantics= "(?) S set"
+    warning(paste0("No semantic annotation available for object ",var,". Assumend semantics will be: ",semantics))
+    return(semantics)
   }
+
+
+  if (is(obj, "Date") || is(obj, "POSIXct")  || is(obj, "POSIXctLt")) {
+    if(length(obj)<=1)
+      return("T")
+    else
+      return("T set")
+  }
+
+
+  if (is(obj, "xts")) {
+    semantics= "(?) T x Q set"
+    warning(paste0("No semantic annotation available for object ",var,". Assumend semantics will be: ",semantics))
+      return(semantics)
+  }
+
+  if (is(obj, "STFDF")) {
+    semantics= "(?) S x T x Q set"
+    warning(paste0("No semantic annotation available for object ",var,". Assumend semantics will be: ",semantics))
+    return(semantics)
+  }
+
+  if (is(obj, "STF")) {
+    isTimeAnnotated = !is.null(attr(obj@time,"semantics"))
+    isSpaceAnnotated = !is.null(attr(obj@time,"semantics"))
+    if(isTimeAnnotated){
+      time_s = getObjectSemantics(obj@time)
+    }else{
+      if(length(obj@time)<=1){
+        time_s = "T"
+      }else{
+        time_s = "(T set)"
+      }
+    }
+
+    space_s = getObjectSemantics(obj@sp)
+
+    if(stringr::str_detect(space_s, "set$")){
+      space_s=paste0("(",space_s,")")
+    }
+    if(stringr::str_detect(time_s, "set$")){
+      time_s=paste0("(",time_s,")")
+    }
+
+    semantics = paste0(space_s, " x ", time_s)
+    if(!isTimeAnnotated || !isSpaceAnnotated){
+      semantics = paste("(?)",semantics)
+      warning(paste0("No semantic annotation available for object ",var,". Assumend semantics will be: ",semantics))
+    }
+
+    return(semantics)
+  }
+
 
  if(any(sapply(list(is.data.frame, is.list, is.array, is.matrix), function(fun) {
     return(fun(obj))
   }))) {
       return("Q set")
+ }
+
+
+  if(is.function(obj) && any(sapply(list(sum, mean, median, sd, var), function(fun) {
+    return(identical(fun, obj))
+  }))) {
+    return("Qstat")
   }
 
   return(paste0("(?)Class:",class(obj)))
@@ -1123,10 +1209,11 @@ captureSemantics <- function(fun){
 
     call_semantics = algebr$estimateCallSemantics(args, output)
 
-
     if(!is.null(postprocessor)){
       output = postprocessor(args, output, call_semantics)
     }
+    #re-estimate call semantics
+    call_semantics = algebr$estimateCallSemantics(args, output)
     isValid = TRUE
     if(!is.null(validator)){
       isValid = validator(args, output, semantics, call_semantics)
@@ -1421,29 +1508,120 @@ algebr$removeTheAt = function(expr){
   return(outExp)
 }
 
+#'  Get functional type from semantic pedigree
+#'
+#' @param obj The object from which the functional type shall be retrieved
+#' @param attr The attribtute from which the functional type shall be retrieved
+#'
+#' @return
+#' @export
+functionalType <- function(obj,attr="ALL"){
+  out = NULL
+  if(attr!="ALL" && !is.null(attr) && !is.na(attr) && attr %in% names(obj)){
+    out=attr(obj[[attr]], "functionalType")
+  }
+  if(is.null(out))
+    out=attr(obj, "functionalType")
+  return(out)
+}
+
 
 #' Add a functional type to semantic pedigree
 #'
 #' @param obj
 #' @param attr
 #' @param value
+#' @param parent indicates whether the generationType is mapped to a parent dataset (using gendata or not)
 #'
-#' @return
+#' @return Returns the object annotated with semantic pedigree
 #' @export
 #'
 #' @examples
-`functionalType<-` <- function(obj,attr="ALL",value){
-  if(value == "SField"){
-      obj=addSemanticPedigree(obj,attr = attr, name = "SField", procedure = "S -> Q",result_semantics = "Q set", parent_semantics = "S x Q set")
-      return(obj)
-  }
+`functionalType<-` <- function(obj,attr="ALL",value, parent = TRUE){
+  parent_semantics = NULL
 
-  if(value == "Field"){
-    obj=addSemanticPedigree(obj,attr = attr, name = "Field", procedure = "S x T-> Q",result_semantics = "Q set", parent_semantics = "S x T x Q set")
+  if(value == "SField"){
+    if(parent)
+      parent_semantics = "S x Q set"
+    obj=addSemanticPedigree(obj,attr = attr, name = value, procedure = "S -> Q",result_semantics = "Q set", parent_semantics = parent_semantics)
+  }else if(value == "Field"){
+   if(parent)
+     parent_semantics = "S x T x Q set"
+    obj=addSemanticPedigree(obj,attr = attr, name = value, procedure = "S x T -> Q",result_semantics = "Q set", parent_semantics = parent_semantics)
+  } else if(value == "TField"){
+    if(parent)
+      parent_semantics = "T x Q set"
+    obj=addSemanticPedigree(obj,attr = attr, name = value, procedure = "T -> Q",result_semantics = "Q set", parent_semantics = parent_semantics)
+
+  }else if(value == "InvField"){
+    if(parent)
+      parent_semantics = "Q x Occurs set"
+    obj=addSemanticPedigree(obj,attr = attr, name = value, procedure = "Q -> Occurs",result_semantics = "Q set", parent_semantics = parent_semantics)
+
+  }else if(value == "SInvField"){
+    if(parent)
+      parent_semantics = "Q x R set"
+    obj=addSemanticPedigree(obj,attr = attr, name = value, procedure = "Q -> R",result_semantics = "R set", parent_semantics = parent_semantics)
     return(obj)
-   }
-  stop("Functional type name is unknown. Please consider adding the semantics manually using addSemanticPedigree")
+  } else if(value == "TInvField"){
+    if(parent)
+      parent_semantics = "Q x T set"
+    obj=addSemanticPedigree(obj,attr = attr, name = value, procedure = "Q -> T",result_semantics = "T set", parent_semantics = parent_semantics)
+
+  } else if(value == "Lattice"){
+    if(parent)
+      parent_semantics = "R x I x Q set"
+    obj=addSemanticPedigree(obj,attr = attr, name = value, procedure = "R -> I -> Q",result_semantics = "Q set", parent_semantics = parent_semantics)
+
+  } else if(value == "SLattice"){
+    if(parent)
+      parent_semantics = "R x Q set"
+    obj=addSemanticPedigree(obj,attr = attr, name = value, procedure = "R -> Q",result_semantics = "Q set", parent_semantics = parent_semantics)
+
+  } else if(value == "TLattice"){
+    if(parent)
+      parent_semantics = "I x Q set"
+    obj=addSemanticPedigree(obj,attr = attr, name = value, procedure = "I -> Q",result_semantics = "Q set", parent_semantics = parent_semantics)
+
+  } else if(value == "Event"){
+    if(parent)
+      parent_semantics = "D x S x T set"
+    obj=addSemanticPedigree(obj,attr = attr, name = value, procedure = "D -> S x T",result_semantics = "S x T set", parent_semantics = parent_semantics)
+
+  } else if(value == "SEvent"){
+    if(parent)
+      parent_semantics = "D x S set"
+    obj=addSemanticPedigree(obj,attr = attr, name = value, procedure = "D -> S",result_semantics = "S set", parent_semantics = parent_semantics)
+
+  } else if(value == "TEvent"){
+    if(parent)
+      parent_semantics = "D x T set"
+    obj=addSemanticPedigree(obj,attr = attr, name = value, procedure = "D -> T",result_semantics = "T set", parent_semantics = parent_semantics)
+
+  } else if(value == "MarkedEvent"){
+    if(parent)
+      parent_semantics = "D x S x T x Q set"
+    obj=addSemanticPedigree(obj,attr = attr, name = value, procedure = "D -> S x T x Q",result_semantics = "S x T x Q set", parent_semantics = parent_semantics)
+
+  } else if(value == "SMarkedEvent"){
+    if(parent)
+      parent_semantics = "D x S x Q set"
+    obj=addSemanticPedigree(obj,attr = attr, name = value, procedure = "D -> S x Q",result_semantics = "S x Q set", parent_semantics = parent_semantics)
+  } else
+     stop("Functional type name is unknown. Please consider adding the semantics manually using addSemanticPedigree
+          and setting the attribute functionalType, if you refer to a valid spatio-temporal generation Type")
+
+  #### TODO: Komplete list of Events, add objects and Trajectories
+
+  if(attr!="ALL" && !is.null(attr) && !is.na(attr) && attr %in% names(obj)){
+    attr(obj[[attr]], "functionalType") <- value
+  }else
+    attr(obj, "functionalType") <- value
+
+   return(obj)
 }
+
+
 
 #captureSemantics(`functionalType<-`, postprocessor=NULL) <- TRUE
 
@@ -1487,14 +1665,15 @@ algebr$findExpressionSemantics = function(exp, exp_id, cmd, g){
  # print(out_iids)
   if(is.null(out_iids))
     return(g)
+  # print(paste(out_iids,out_sem))
   mapply(function(out_iid, out_sem){
-
+     # print("TEST1")
       var = algebr$varFromIID(out_iid)
 
 
 
       attr=algebr$findAttr(var)
-
+     # print("TEST2")
       tryCatch({
         #look if call is function call
         fname = cmd[[1]]
@@ -1507,11 +1686,12 @@ algebr$findExpressionSemantics = function(exp, exp_id, cmd, g){
         name = "expression"
         warning(e)
       })
-
+      #print("TEST3")
       if (is.na(attr)) {
         obj = eval(parse(text = algebr$enquote(var)), envir = globalenv())
         if(algebr$isAlreadyAnnotated(obj))
           return(g)
+        #print(paste("!!! ",class(obj), substitute(obj,env = globalenv()),name,exp$semantics))
         obj = addSemanticPedigree(obj = obj, name = name, procedure = exp$semantics, result_semantics = out_sem)
         assign(var, obj, envir = globalenv())
         #print(paste0("Assigninged semantic pedigree to ",var))
@@ -1525,6 +1705,7 @@ algebr$findExpressionSemantics = function(exp, exp_id, cmd, g){
         assign(deparse(parent_var), obj, envir = globalenv())
         #print(paste0("Assigninged semantic pedigree to ",parent_var))
       }
+      return(g)
   }, out_iid=out_iids, out_sem=out_sem)
   return(g)
 

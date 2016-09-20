@@ -4,10 +4,13 @@
 \alias{functionalType<-}
 \title{Add a functional type to semantic pedigree}
 \usage{
-functionalType(obj, attr = "ALL") <- value
+functionalType(obj, attr = "ALL", parent = TRUE) <- value
 }
 \arguments{
-\item{value}{}
+\item{parent}{indicates whether the generationType is mapped to a parent dataset (using gendata or not)}
+}
+\value{
+Returns the object annotated with semantic pedigree
 }
 \description{
 Add a functional type to semantic pedigree
