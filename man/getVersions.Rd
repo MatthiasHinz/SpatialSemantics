@@ -2,15 +2,18 @@
 % Please edit documentation in R/graphFunctions.R
 \name{getVersions}
 \alias{getVersions}
-\title{Version history of variable bindings}
+\title{Get history of a variable's name bindings}
 \usage{
 getVersions(var)
 }
 \arguments{
-\item{var}{name of the variable, either string or object}
+\item{var}{Name of the variable, either string or object}
+}
+\value{
+A data.frame describing changes of a variable's name binding
 }
 \description{
-This function returns a versioning history showing all modifications (initialization, updates and replacements) of a particular variable in the global environment
+This function returns a versioning history showing all modifications (initialization, updates and replacements) of a variable's name binding in the global environment
 The version based on recording provenance, i.e. it only captures modifcations that where don after calling enableProvenance() and before calling disableProvenance()
 }
 

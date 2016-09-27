@@ -13,6 +13,10 @@ getScriptGraph(g = algebr$scriptGraph)
 Returns derivation graph of the script in Ragraph format (Rgraphviz) or NULL, if there is no provanance available
 }
 \description{
-This function returns a derivation graph from the previously recorded provenance, if any
+This function returns a derivation graph from the previously recorded provenance, if available.
+The graph can be serialized as dot/gv and other formats using rGraphviz
+}
+\seealso{
+\code{\link{enableProvenance}}, \code{\link{disableProvenance}}, \code{\link{reset_provenance}}
 }
 

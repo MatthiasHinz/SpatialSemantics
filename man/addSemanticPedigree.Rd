@@ -2,15 +2,29 @@
 % Please edit documentation in R/graphFunctions.R
 \name{addSemanticPedigree}
 \alias{addSemanticPedigree}
-\title{Add semantic pedigree}
+\title{Adds an entry to the semantic pedigree reccord of an object.}
 \usage{
 addSemanticPedigree(obj, attr = "ALL", name = NA, procedure,
   result_semantics = NULL, parent_semantics = NULL)
 }
 \arguments{
-\item{parent_semantics}{}
+\item{obj}{The object that should be annoted}
+
+\item{attr}{(optional string) The name of the attribute to be annotated}
+
+\item{name}{(string) - The name of the semantic procedure that created/modified the object}
+
+\item{procedure}{(string) - The signature of the semantic procedure that created/modified the object}
+
+\item{result_semantics}{(string) The semantics of the result that is modified}
+
+\item{parent_semantics}{(otpional string) If the result_semantics refer to an attribute or subset of a larger dataset, the semantics of the enclosing dataset}
+}
+\value{
+The annotated object
 }
 \description{
-Add semantic pedigree
+Adds an entry to the semantic pedigree reccord of an object.
+The records corresponds to the "semanticPedigree"-attribute of annotated objects.
 }
 

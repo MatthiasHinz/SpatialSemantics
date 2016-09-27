@@ -2,16 +2,53 @@
 % Please edit documentation in R/graphFunctions.R
 \name{captureSemantics<-}
 \alias{captureSemantics<-}
-\title{Capture Semantics}
+\title{Capture Semantics - automatically create a semantic function wrapper}
 \usage{
 captureSemantics(fun, semantics = NA, procedureName = "unknown",
   validator = NULL,
   postprocessor = algebr$genericProcedureAnnotator(procedureName)) <- value
 }
 \arguments{
-\item{value}{}
+\item{fun}{The function to be wrapped}
+
+\item{semantics}{(optional) The default call semantics, given as a collection of strings}
+
+\item{procedureName}{(optional) The name of the semantic procedure that corresponds to this function}
+
+\item{validator}{(optional) A boolean function that validates function calls and returns TRUE/FALSE if the call is valid or invalid
+Validators should be written according to the following schema:
+
+function(args, output, default_semantics, call_semantics){
+  if(TRUE) #insert requirements
+    return(TRUE)
+  else
+    return(FALSE)
+}
+
+args are a named list of all input arguments of the function call.
+output is the object that was created and annotated during the call
+default_semantics are the default call semantics of the function, if any. If not, NA
+call_semantics are the estimated semantics of the call, given as a single string}
+
+\item{postprocessor}{(optional) A postprocessor function that can be used to annotate the output of a function
+Postprocessors should be written according to the following schema:
+
+function(args, output, call_semantics){
+   #annotate output
+   return(output)
+}
+
+The arguments arguments of the postprocessor are similar to the validator. The postprocessor is called before the validator}
+
+\item{value}{Boolean value that indicates whethere or not a function should be wrapped. Wrapped functions can be 'unwrapped' by setting this value to FALSE}
+}
+\value{
+A wrapped/unwrapped function (depending on the value-parameter)
 }
 \description{
-Capture Semantics
+Capture Semantics - automatically create a semantic function wrapper
+}
+\seealso{
+\code{\link{captureSemantics}}
 }
 

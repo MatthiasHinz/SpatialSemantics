@@ -2,17 +2,26 @@
 % Please edit documentation in R/graphFunctions.R
 \name{functionalType<-}
 \alias{functionalType<-}
-\title{Add a functional type to semantic pedigree}
+\title{Assign a functional type to a spatio-temporal dataset}
 \usage{
 functionalType(obj, attr = "ALL", parent = TRUE) <- value
 }
 \arguments{
+\item{obj}{The object that is annotated}
+
+\item{attr}{(optional string) the attribute that is annotated}
+
+\item{value}{The annotated object}
+
 \item{parent}{indicates whether the generationType is mapped to a parent dataset (using gendata or not)}
 }
 \value{
 Returns the object annotated with semantic pedigree
 }
 \description{
-Add a functional type to semantic pedigree
+Assign a functional type to a spatio-temporal dataset
+}
+\seealso{
+\code{\link{functionalType}}
 }
 

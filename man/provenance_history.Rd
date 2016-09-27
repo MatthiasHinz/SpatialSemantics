@@ -6,6 +6,9 @@
 \usage{
 provenance_history()
 }
+\value{
+list of expressions
+}
 \description{
 Retrieve the list of all recorded commands
 }

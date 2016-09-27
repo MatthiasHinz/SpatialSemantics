@@ -2,14 +2,20 @@
 % Please edit documentation in R/graphFunctions.R
 \name{getSemanticPedigree}
 \alias{getSemanticPedigree}
-\title{Get semantic pedigree}
+\title{Get semantic pedigree of an object}
 \usage{
 getSemanticPedigree(obj, attr = "ALL")
 }
 \arguments{
-\item{attr}{}
+\item{obj}{The object from which pedigree should queried}
+
+\item{attr}{(optional) the attribute/subset from which pedigree should be queried}
+}
+\value{
+The semantic-pedigree record, as a data.frame, if available.
 }
 \description{
-Get semantic pedigree
+Retrieves and prints the semantic pedigree of a record of annotated data.
+The records corresponds to the "semanticPedigree"-attribute of annotated objects.
 }
 

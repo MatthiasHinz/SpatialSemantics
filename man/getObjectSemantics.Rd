@@ -2,7 +2,7 @@
 % Please edit documentation in R/graphFunctions.R
 \name{getObjectSemantics}
 \alias{getObjectSemantics}
-\title{Estimate semantics of a given object}
+\title{Get/estimate object semantics of a given object}
 \usage{
 getObjectSemantics(var, env = globalenv(), isLiteral = FALSE)
 }
@@ -20,6 +20,6 @@ Returns the semantic reference type of the object.
  For objects, where no semantic mapping is defined, simply the class will be returned
 }
 \description{
-Estimate semantics of a given object
+Get/estimate object semantics of a given object
 }
 

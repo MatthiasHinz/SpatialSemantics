@@ -2,14 +2,20 @@
 % Please edit documentation in R/graphFunctions.R
 \name{captureSemantics}
 \alias{captureSemantics}
-\title{Capture Semantics}
+\title{Show whether a function is wrapped or not}
 \usage{
 captureSemantics(fun)
 }
 \arguments{
-\item{fun}{}
+\item{fun}{The function that is / is not wrapped}
+}
+\value{
+TRUE/FALSE, depending on whether the function is wrapped
 }
 \description{
-Capture Semantics
+Show whether a function is wrapped or not
+}
+\seealso{
+\code{\link{captureSemantics<-}}
 }
 

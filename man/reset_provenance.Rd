@@ -2,11 +2,17 @@
 % Please edit documentation in R/graphFunctions.R
 \name{reset_provenance}
 \alias{reset_provenance}
-\title{Deletes all internally recorded provenance and sets the tracker back to default state}
+\title{Reset / delete internal provenance record}
 \usage{
 reset_provenance()
 }
+\value{
+(invisible)
+}
 \description{
 Deletes all internally recorded provenance and sets the tracker back to default state
+}
+\seealso{
+\code{\link{enableProvenance}}, \code{\link{disableProvenance}}
 }
 

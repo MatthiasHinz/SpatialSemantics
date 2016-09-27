@@ -6,7 +6,13 @@
 \usage{
 enableProvenance()
 }
+\value{
+(invisible)
+}
 \description{
 Enable / disable provenance tracking
+}
+\seealso{
+\code{\link{disableProvenance}}, \code{\link{reset_provenance}}
 }
 

@@ -25,16 +25,17 @@ algebr$newDerivationGraph <-function(){
 #
 #' Retrieve derivation graph for export / vizalization
 #'
-#' This function returns a derivation graph from the previously recorded provenance, if any
+#' This function returns a derivation graph from the previously recorded provenance, if available.
+#' The graph can be serialized as dot/gv and other formats using rGraphviz
 #'
 #' @param g Derivation graph in internal data.frame format as created by the internal function 'algebr$newDerivationGraph'
 #'
 #' @return Returns derivation graph of the script in Ragraph format (Rgraphviz) or NULL, if there is no provanance available
 #'
-#' @seealso \code{\link{enableProvenance}}, \code{\link{disableProvenance}\code, {\link{reset_Provenance}}
+#' @seealso \code{\link{enableProvenance}}, \code{\link{disableProvenance}}, \code{\link{reset_provenance}}
 #' @export
 #'
-#' @examples
+#'
 getScriptGraph <- function(g=algebr$scriptGraph){
   if(is.null(g$V) || length(g$V) == 0){
     warning("There is no derivation graph available because no provenance was recorded. Returning NULL")
@@ -151,11 +152,10 @@ algebr$enabled = function(){
 
 #' Enable / disable provenance tracking
 #'
-#' @return
+#' @return (invisible)
 #' @export
 #'
-#' @seealso \code{\link{disableProvenance}\code, {\link{reset_Provenance}}
-#' @examples
+#' @seealso \code{\link{disableProvenance}}, \code{\link{reset_provenance}}
 enableProvenance <- function(){
   if(is.null(algebr$rec_num))
     algebr$rec_num = 1
@@ -192,11 +192,10 @@ enableProvenance <- function(){
 
 #' Enable / disable provenance tracking
 #'
-#' @return
+#' @return (invisible)
 #' @export
 #'
-#' @seealso \code{\link{enableProvenance}}, {\link{reset_Provenance}}
-#' @examples
+#' @seealso \code{\link{enableProvenance}}, \code{\link{reset_provenance}}
 disableProvenance <-function(){
 
   if(algebr$enabled()){
@@ -209,13 +208,14 @@ disableProvenance <-function(){
 }
 
 
+#' Reset / delete internal provenance record
+#'
 #' Deletes all internally recorded provenance and sets the tracker back to default state
 #'
-#' @return
+#' @return (invisible)
 #' @export
 #'
-#' @seealso \code{\link{enableProvenance}}, \code{\link{disableProvenance}\code
-#' @examples
+#' @seealso \code{\link{enableProvenance}}, \code{\link{disableProvenance}}
 reset_provenance <-function(){
   if(algebr$enabled()){
     disableProvenance()
@@ -231,10 +231,9 @@ reset_provenance <-function(){
 
 #' Retrieve the list of all recorded commands
 #'
-#' @return
+#' @return list of expressions
 #' @export
 #'
-#' @examples
 provenance_history <- function(){
   return(algebr$history_list)
 }
@@ -333,17 +332,16 @@ algebr$addNewVersionRecord <- function(var){
 }
 
 
-#' Version history of variable bindings
+#' Get history of a variable's name bindings
 #'
-#' This function returns a versioning history showing all modifications (initialization, updates and replacements) of a particular variable in the global environment
+#' This function returns a versioning history showing all modifications (initialization, updates and replacements) of a variable's name binding in the global environment
 #' The version based on recording provenance, i.e. it only captures modifcations that where don after calling enableProvenance() and before calling disableProvenance()
 #'
-#' @param var name of the variable, either string or object
+#' @param var Name of the variable, either string or object
 #'
-#' @return
+#' @return A data.frame describing changes of a variable's name binding
 #' @export
 #'
-#' @examples
 getVersions <- function(var){
   if(!is.character(var))
     var=as.character(substitute(var))
@@ -831,7 +829,7 @@ algebr$containsOnlyPrimitives = function(cmd){
 #' See http://adv-r.had.co.nz/Functions.html
 #' @param expr
 #'
-#' @return
+#' @return A standardized call expression that calls a replacement function by the same syntax as a standard function is calles
 #' @export
 #'
 #' @examples
@@ -877,7 +875,7 @@ rewriteReplacementFunction = function(expr){
 # Semantics related functions
 ####
 
-#' Estimate semantics of a given object
+#' Get/estimate object semantics of a given object
 #'
 #' @param var object or name of the object
 #' @param env The environment in which the object shall be evaluated
@@ -887,9 +885,9 @@ rewriteReplacementFunction = function(expr){
 #'  If the reference type is unknown because there is no annotation is available, a reference type is estimated based on a heuristic mapping.
 #'  If the mapping is 'unsave', the type will be prefixed with a questionmark '(?)' and a warning is given out.
 #'  For objects, where no semantic mapping is defined, simply the class will be returned
+#'
 #' @export
 #'
-#' @examples
 getObjectSemantics <- function(var, env=globalenv(), isLiteral=FALSE){
 
   if((!is.character(var) && !is.symbol(var) && !is.name(var)) || isLiteral) {
@@ -1084,9 +1082,9 @@ getObjectSemantics <- function(var, env=globalenv(), isLiteral=FALSE){
 }
 
 
-#' Pre-defined semantics of a function call
+#' Get default call semantics that where defined for a wrapped function
 #'
-#' @param x An object of type function
+#' @param x An object of type function, should be a semantic wrapper function
 #'
 #' @return
 #' - returns a list of pre-defined semantics which are alowed for this function
@@ -1095,7 +1093,6 @@ getObjectSemantics <- function(var, env=globalenv(), isLiteral=FALSE){
 #' @export
 #' @seealso \code{\link{getObjectSemantics}}, \code{\link{captureSemantics}}
 #'
-#' @examples
 getDefaultCallSemantics = function(x){
   if(!is.function(x)){stop("The given object x is not a function. Call semantics are an attribute only for semantics-enabled funtions.")}
 
@@ -1131,34 +1128,56 @@ algebr$genericProcedureAnnotator <- function(procedureName){
   }
 }
 
-#jars of clay - frail
-#' Capture Semantics
+#' Show whether a function is wrapped or not
 #'
-#' @param fun
+#' @param fun The function that is / is not wrapped
 #'
-#' @return
+#' @return TRUE/FALSE, depending on whether the function is wrapped
 #' @export
 #'
-#' @examples
+#' @seealso \code{\link{captureSemantics<-}}
 captureSemantics <- function(fun){
   return(isTRUE(attr(fun,"SemanticWrapper")))
 }
 
 
 
-#' Capture Semantics
+#' Capture Semantics - automatically create a semantic function wrapper
 #'
-#' @param fun
-#' @param semantics
-#' @param procedureName
-#' @param validator
-#' @param postprocessor
-#' @param value
+#' @param fun The function to be wrapped
+#' @param semantics (optional) The default call semantics, given as a collection of strings
+#' @param procedureName (optional) The name of the semantic procedure that corresponds to this function
+#' @param validator (optional) A boolean function that validates function calls and returns TRUE/FALSE if the call is valid or invalid
+#' Validators should be written according to the following schema:
 #'
-#' @return
+#' function(args, output, default_semantics, call_semantics){
+#'   if(TRUE) #insert requirements
+#'     return(TRUE)
+#'   else
+#'     return(FALSE)
+#' }
+#'
+#' args are a named list of all input arguments of the function call.
+#' output is the object that was created and annotated during the call
+#' default_semantics are the default call semantics of the function, if any. If not, NA
+#' call_semantics are the estimated semantics of the call, given as a single string
+#'
+#' @param postprocessor (optional) A postprocessor function that can be used to annotate the output of a function
+#' Postprocessors should be written according to the following schema:
+#'
+#' function(args, output, call_semantics){
+#'    #annotate output
+#'    return(output)
+#' }
+#'
+#' The arguments arguments of the postprocessor are similar to the validator. The postprocessor is called before the validator
+#'
+#' @param value Boolean value that indicates whethere or not a function should be wrapped. Wrapped functions can be 'unwrapped' by setting this value to FALSE
+#'
+#' @return A wrapped/unwrapped function (depending on the value-parameter)
+#' @seealso \code{\link{captureSemantics}}
 #' @export
 #'
-#' @examples
 `captureSemantics<-` <- function(fun, semantics = NA, procedureName = "unknown", validator=NULL, postprocessor=algebr$genericProcedureAnnotator(procedureName), value){
   if(is.null(semantics)){
     semantics=NA
@@ -1272,19 +1291,21 @@ captureSemantics <- function(fun){
   return(fun)
 }
 
-#' Add semantic pedigree
+#' Adds an entry to the semantic pedigree reccord of an object.
 #'
-#' @param obj
-#' @param attr
-#' @param name
-#' @param procedure
-#' @param result_semantics
-#' @param parent_semantics
+#' Adds an entry to the semantic pedigree reccord of an object.
+#' The records corresponds to the "semanticPedigree"-attribute of annotated objects.
 #'
-#' @return
+#' @param obj The object that should be annoted
+#' @param attr (optional string) The name of the attribute to be annotated
+#' @param name (string) - The name of the semantic procedure that created/modified the object
+#' @param procedure (string) - The signature of the semantic procedure that created/modified the object
+#' @param result_semantics (string) The semantics of the result that is modified
+#' @param parent_semantics (otpional string) If the result_semantics refer to an attribute or subset of a larger dataset, the semantics of the enclosing dataset
+#'
+#' @return The annotated object
 #' @export
 #'
-#' @examples
 addSemanticPedigree <- function(obj, attr="ALL", name = NA, procedure, result_semantics=NULL, parent_semantics=NULL){
   #print(paste("adding semantics for", substitute(obj), attr, name, procedure, result_semantics, parent_semantics))
   ## attr might be of length > 1. in this case create one record for each attr
@@ -1370,15 +1391,16 @@ algebr$findMissingPedigreeCommands <- function(ped){
   return(ped)
 }
 
-#' Get semantic pedigree
+#' Get semantic pedigree of an object
 #'
-#' @param obj
-#' @param attr
+#' Retrieves and prints the semantic pedigree of a record of annotated data.
+#' The records corresponds to the "semanticPedigree"-attribute of annotated objects.
 #'
-#' @return
+#' @param obj The object from which pedigree should queried
+#' @param attr (optional) the attribute/subset from which pedigree should be queried
+#'
+#' @return The semantic-pedigree record, as a data.frame, if available.
 #' @export
-#'
-#' @examples
 getSemanticPedigree <- function(obj, attr="ALL"){
   varname = as.character(substitute(obj))
 
@@ -1508,12 +1530,13 @@ algebr$removeTheAt = function(expr){
   return(outExp)
 }
 
-#'  Get functional type from semantic pedigree
+#'  Get functional type of a spatio-temporal dataset
 #'
 #' @param obj The object from which the functional type shall be retrieved
-#' @param attr The attribtute from which the functional type shall be retrieved
+#' @param attr The attribute from which the functional type shall be retrieved
 #'
-#' @return
+#' @return The object that is annotated
+#' @seealso \code{\link{functionalType<-}}
 #' @export
 functionalType <- function(obj,attr="ALL"){
   out = NULL
@@ -1526,17 +1549,17 @@ functionalType <- function(obj,attr="ALL"){
 }
 
 
-#' Add a functional type to semantic pedigree
+#' Assign a functional type to a spatio-temporal dataset
 #'
-#' @param obj
-#' @param attr
-#' @param value
+#' @param obj The object that is annotated
+#' @param attr (optional string) the attribute that is annotated
+#' @param value The annotated object
 #' @param parent indicates whether the generationType is mapped to a parent dataset (using gendata or not)
 #'
 #' @return Returns the object annotated with semantic pedigree
 #' @export
 #'
-#' @examples
+#' @seealso \code{\link{functionalType}}
 `functionalType<-` <- function(obj,attr="ALL",value, parent = TRUE){
   parent_semantics = NULL
 

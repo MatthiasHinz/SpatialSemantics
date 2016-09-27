@@ -2,12 +2,12 @@
 % Please edit documentation in R/graphFunctions.R
 \name{getDefaultCallSemantics}
 \alias{getDefaultCallSemantics}
-\title{Pre-defined semantics of a function call}
+\title{Get default call semantics that where defined for a wrapped function}
 \usage{
 getDefaultCallSemantics(x)
 }
 \arguments{
-\item{x}{An object of type function}
+\item{x}{An object of type function, should be a semantic wrapper function}
 }
 \value{
 - returns a list of pre-defined semantics which are alowed for this function
@@ -15,7 +15,7 @@ getDefaultCallSemantics(x)
 - returns NULL if the function is not semantics-enabled and does not implement pre-defined semantics
 }
 \description{
-Pre-defined semantics of a function call
+Get default call semantics that where defined for a wrapped function
 }
 \seealso{
 \code{\link{getObjectSemantics}}, \code{\link{captureSemantics}}
