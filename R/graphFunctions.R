@@ -1562,7 +1562,6 @@ functionalType <- function(obj,attr="ALL"){
     if(parent)
       parent_semantics = "Q x R set"
     obj=addSemanticPedigree(obj,attr = attr, name = value, procedure = "Q -> R",result_semantics = "R set", parent_semantics = parent_semantics)
-    return(obj)
   } else if(value == "TInvField"){
     if(parent)
       parent_semantics = "Q x T set"
@@ -1615,9 +1614,11 @@ functionalType <- function(obj,attr="ALL"){
 
   if(attr!="ALL" && !is.null(attr) && !is.na(attr) && attr %in% names(obj)){
     attr(obj[[attr]], "functionalType") <- value
-  }else
+    #print(paste0("Setting functional type to object of class", class(obj), " type: ",value," attribute: ",attr))
+  }else{
     attr(obj, "functionalType") <- value
-
+    #print(paste0("Setting functional type to object of class", class(obj), " type: ",value))
+  }
    return(obj)
 }
 
