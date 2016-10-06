@@ -8,7 +8,7 @@ The package incorporates semantic annotations in compliance with Scheider et al.
 
 It is possible to visualize and export spatio-temporal data derivation graphs using the Rgraphviz-package. Besides the native GraphViz-format 'dot/gv', many other export formats are supported, for instance, pdf, svg, png and jpg.
 
-The package was initialized in fulfillment of my Master's thesis 'Communicating meaning and purpose of spatio-temporal data analysis'
+The package was initiated in fulfillment of the Master's thesis 'Communicating meaning and purpose of spatio-temporal data analysis' by Matthias Hinz.
 
 [1] Scheider, Simon, et al. "Modeling spatiotemporal information generation." International Journal of Geographical Information Science (2016): 1-29.
 
