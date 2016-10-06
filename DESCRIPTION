@@ -1,7 +1,7 @@
 Package: SpatialSemantics
 Type: Package
 Title: Semantics and provenance for Spatial Statistics
-Version: 0.1.0
+Version: 0.2.0
 Author: Matthias Hinz
 Maintainer: Matthias Hinz <matthias.m.hinz@gmail.com>
 Description: SpatialSemantics records provenance through task-callbacks as
