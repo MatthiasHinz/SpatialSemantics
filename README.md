@@ -29,4 +29,5 @@ devtools::install_github("MatthiasHinz/SpatialSemantics")
 ## Figures
 
 A data derivation graph of a spatio-temporal aggregation carried out in R:
+
 ![Spatio-temporal data derivation graph](https://github.com/MatthiasHinz/SpatialSemantics/raw/master/resources/Florida.png)
