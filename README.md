@@ -8,11 +8,11 @@ The package incorporates semantic annotations in compliance with Scheider et al.
 
 It is possible to visualize and export spatio-temporal data derivation graphs using the Rgraphviz-package. Besides the native GraphViz-format 'dot/gv', many other export formats are supported, for instance, pdf, svg, png and jpg.
 
-The package was initiated in fulfillment of the Master's thesis 'Communicating meaning and purpose of spatio-temporal data analysis' by Matthias Hinz.
+The package was initiated in fulfillment of the Master's thesis 'Communicating meaning and purpose of spatio-temporal data analysis' by Matthias Hinz. More information follows soon.
 
 [1] Scheider, Simon, et al. "Modeling spatiotemporal information generation." International Journal of Geographical Information Science (2016): 1-29.
 
-## Package installation:
+## Package installation
 
 ```
 #for installing dependencies not on CRAN
@@ -26,3 +26,7 @@ install.packages(c("stringr","codetools")
 
 devtools::install_github("MatthiasHinz/SpatialSemantics")
 ```
+## Figures
+
+A data derivation graph of a spatio-temporal aggregation carried out in R:
+![Spatio-temporal data derivation graph](https://github.com/MatthiasHinz/AlgebR/raw/master/Florida.pdf)
