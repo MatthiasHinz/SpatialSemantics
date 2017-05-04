@@ -14,7 +14,7 @@ The package was initiated in fulfillment of the Master's thesis 'Communicating m
 
 ## Package installation
 
-```
+``` R
 #for installing dependencies not on CRAN
 install.packages("devtools")
 devtools::install_github('duncantl/CodeDepends')
